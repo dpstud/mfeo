@@ -151,29 +151,6 @@ body{background:#f0efe8;min-height:100vh;-webkit-tap-highlight-color:transparent
 .chip .s{color:#777;font-size:11px;}
 .empty{font-size:13px;color:#999;}
 
-/* ZOOM CONTROLS FOR ORCHESTRA 2 */
-.zoom-controls-wrapper{display:none;padding:8px 18px;border-bottom:1px solid #eee;background:#fafaf8;}
-.zoom-controls-wrapper.active{display:flex;justify-content:space-between;align-items:center;gap:12px;}
-.mode-toggle{display:flex;border-radius:8px;overflow:hidden;border:2px solid #185FA5;background:#fff;}
-.mode-btn{padding:6px 14px;font-size:12px;font-weight:600;border:none;background:#fff;color:#666;cursor:pointer;transition:all .2s;min-height:32px;touch-action:manipulation;}
-.mode-btn.active{background:#185FA5;color:#fff;}
-.zoom-btns{display:flex;gap:6px;}
-.zoom-btns button{width:32px;height:32px;border:none;background:#f0f0f0;color:#333;font-size:14px;font-weight:bold;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
-.zoom-btns button:active{background:#e0e0e0;}
-.sp-body.view-mode{cursor:grab;overflow:hidden;}
-.sp-body.view-mode.dragging{cursor:grabbing;}
-.sp-body.claim-mode{overflow-y:auto;overflow-x:auto;}
-.sp-body.view-mode .seat-btn{pointer-events:none;}
-.sp-body.claim-mode .seat-btn{pointer-events:auto;}
-.seat-container{display:inline-block;transform-origin:0 0;}
-.seat-label-zoom{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:600;white-space:nowrap;pointer-events:none;z-index:5;}
-.seat-label-zoom .initials,.seat-label-zoom .fullname{display:none;background:rgba(255,255,255,0.98);padding:2px 4px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
-.seat-label-zoom.claimed .initials,.seat-label-zoom.claimed .fullname{color:#d97706;border:1px solid #fde68a;}
-.seat-label-zoom.mine .initials,.seat-label-zoom.mine .fullname{color:#059669;border:1px solid #a7f3d0;font-weight:700;}
-.seat-container[data-zoom="medium"] .seat-label-zoom .initials{display:block;font-size:8px;}
-.seat-container[data-zoom="high"] .seat-label-zoom .fullname{display:block;font-size:9px;}
-.seat-container[data-zoom="high"] .seat-label-zoom .initials{display:none;}
-
 /* Mobile optimizations */
 @media (max-width: 640px) {
   #main-screen{padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));}
@@ -255,18 +232,7 @@ body{background:#f0efe8;min-height:100vh;-webkit-tap-highlight-color:transparent
       <div><h2 id="sp-title"></h2><div class="sp-sub" id="sp-sub"></div></div>
       <button class="sp-close" onclick="closePanel()">✕</button>
     </div>
-    <div class="zoom-controls-wrapper" id="zoom-controls">
-      <div class="mode-toggle">
-        <button class="mode-btn active" id="view-mode-btn" onclick="setViewMode('view')">👁️ View</button>
-        <button class="mode-btn" id="claim-mode-btn" onclick="setViewMode('claim')">✏️ Claim</button>
-      </div>
-      <div class="zoom-btns">
-        <button onclick="zoomIn()" title="Zoom In">+</button>
-        <button onclick="zoomReset()" title="Reset">⟲</button>
-        <button onclick="zoomOut()" title="Zoom Out">−</button>
-      </div>
-    </div>
-    <div class="sp-body claim-mode" id="sp-body"></div>
+    <div class="sp-body" id="sp-body"></div>
   </div>
 </div>
 <div id="modal-host"></div>
@@ -476,27 +442,11 @@ function seatBtn(zid,row,seat){
   return `<button class="${cls}" onclick="handleSeat('${zid}','${row}',${seat})">${seat}<span class="stip">${tipText}</span></button>`;
 }
 
-function seatBtnWithLabel(zid,row,seat){
-  const key=`${zid}:${row}-${seat}`;
-  const cur=db[night]||{};
-  const who=cur[key];
-  const cls=who?(who===myName?'seat-btn mine':'seat-btn taken'):'seat-btn';
-  const tipText=who?who:`Row ${row}, Seat ${seat}`;
-  let labelHtml='';
-  if(who){
-    const labelCls=who===myName?'seat-label-zoom mine':'seat-label-zoom claimed';
-    const initials=who.split(' ').map(n=>n[0]).join('');
-    labelHtml=`<span class="${labelCls}"><span class="initials">${initials}</span><span class="fullname">${who}</span></span>`;
-  }
-  return `<button class="${cls}" onclick="handleSeat('${zid}','${row}',${seat})">${labelHtml}${seat}<span class="stip">${tipText}</span></button>`;
-}
-
 function openPanel(zid,label){
   const panel=document.getElementById('seat-panel');
   panel.dataset.zid=zid;
   document.getElementById('sp-title').textContent=label;
   document.getElementById('sp-sub').textContent=(night==='fri'?'Friday':'Saturday')+' night · click a seat to claim';
-  zoomState.scale=1;zoomState.translateX=0;zoomState.translateY=0;zoomState.mode='view';setViewMode('view');enableZoom(zid);
   if(!SD[zid]){ renderGenericPanel(zid); }
   else {
     const t=SD[zid].type;
@@ -508,9 +458,13 @@ function openPanel(zid,label){
     else if(t==='mezz1') renderMezz1Panel(zid);
     else renderDetailPanel(zid);
   }
+  // Prevent body scroll when panel is open (mobile)
   document.body.style.overflow='hidden';
   panel.classList.add('open');
-  if('vibrate' in navigator){navigator.vibrate(10);}
+  // Haptic feedback on mobile (if supported)
+  if('vibrate' in navigator){
+    navigator.vibrate(10);
+  }
 }
 
 function closePanel(){
@@ -527,16 +481,6 @@ document.getElementById('seat-panel').addEventListener('click',e=>{
   if(e.target===document.getElementById('seat-panel'))closePanel();
 });
 
-// ZOOM FUNCTIONALITY FOR ORCHESTRA 2
-let zoomState={enabled:false,mode:'view',scale:1,translateX:0,translateY:0,isDragging:false,startX:0,startY:0,initialPinchDistance:0,initialScale:1,initialTranslateX:0,initialTranslateY:0,pinchCenterX:0,pinchCenterY:0};
-function enableZoom(zid){if(zid==='orchestra_2'){zoomState.enabled=true;document.getElementById('zoom-controls').classList.add('active');initZoomListeners();}else{zoomState.enabled=false;document.getElementById('zoom-controls').classList.remove('active');}}
-function setViewMode(mode){zoomState.mode=mode;const body=document.getElementById('sp-body');const viewBtn=document.getElementById('view-mode-btn');const claimBtn=document.getElementById('claim-mode-btn');if(mode==='view'){body.classList.remove('claim-mode');body.classList.add('view-mode');viewBtn.classList.add('active');claimBtn.classList.remove('active');}else{body.classList.remove('view-mode');body.classList.add('claim-mode');viewBtn.classList.remove('active');claimBtn.classList.add('active');}}
-function updateZoomTransform(){const container=document.querySelector('.seat-container');if(!container)return;container.style.transform=`translate(${zoomState.translateX}px, ${zoomState.translateY}px) scale(${zoomState.scale})`;let zoomLevel='low';if(zoomState.scale>=2.5)zoomLevel='high';else if(zoomState.scale>=1.5)zoomLevel='medium';container.dataset.zoom=zoomLevel;}
-function zoomIn(){const body=document.getElementById('sp-body');const rect=body.getBoundingClientRect();const centerX=rect.width/2;const centerY=rect.height/2;const oldScale=zoomState.scale;zoomState.scale=Math.min(zoomState.scale+0.3,3.5);const scaleRatio=zoomState.scale/oldScale;zoomState.translateX=centerX-(centerX-zoomState.translateX)*scaleRatio;zoomState.translateY=centerY-(centerY-zoomState.translateY)*scaleRatio;updateZoomTransform();}
-function zoomOut(){const body=document.getElementById('sp-body');const rect=body.getBoundingClientRect();const centerX=rect.width/2;const centerY=rect.height/2;const oldScale=zoomState.scale;zoomState.scale=Math.max(zoomState.scale-0.3,1);const scaleRatio=zoomState.scale/oldScale;zoomState.translateX=centerX-(centerX-zoomState.translateX)*scaleRatio;zoomState.translateY=centerY-(centerY-zoomState.translateY)*scaleRatio;updateZoomTransform();}
-function zoomReset(){zoomState.scale=1;zoomState.translateX=0;zoomState.translateY=0;updateZoomTransform();}
-let zoomListenersAdded=false;
-function initZoomListeners(){if(zoomListenersAdded)return;zoomListenersAdded=true;const body=document.getElementById('sp-body');body.addEventListener('mousedown',e=>{if(!zoomState.enabled||zoomState.mode!=='view')return;zoomState.isDragging=true;body.classList.add('dragging');zoomState.startX=e.clientX-zoomState.translateX;zoomState.startY=e.clientY-zoomState.translateY;e.preventDefault();});body.addEventListener('mousemove',e=>{if(!zoomState.isDragging||zoomState.mode!=='view')return;zoomState.translateX=e.clientX-zoomState.startX;zoomState.translateY=e.clientY-zoomState.startY;updateZoomTransform();});body.addEventListener('mouseup',()=>{zoomState.isDragging=false;body.classList.remove('dragging');});body.addEventListener('mouseleave',()=>{zoomState.isDragging=false;body.classList.remove('dragging');});body.addEventListener('touchstart',e=>{if(!zoomState.enabled||zoomState.mode!=='view')return;if(e.touches.length===2){e.preventDefault();const dx=e.touches[1].clientX-e.touches[0].clientX;const dy=e.touches[1].clientY-e.touches[0].clientY;zoomState.initialPinchDistance=Math.sqrt(dx*dx+dy*dy);zoomState.initialScale=zoomState.scale;zoomState.initialTranslateX=zoomState.translateX;zoomState.initialTranslateY=zoomState.translateY;const rect=body.getBoundingClientRect();zoomState.pinchCenterX=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left;zoomState.pinchCenterY=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top;zoomState.isDragging=false;}else if(e.touches.length===1){const touch=e.touches[0];zoomState.startX=touch.clientX-zoomState.translateX;zoomState.startY=touch.clientY-zoomState.translateY;zoomState.isDragging=true;}},{passive:false});body.addEventListener('touchmove',e=>{if(!zoomState.enabled||zoomState.mode!=='view')return;if(e.touches.length===2&&zoomState.initialPinchDistance>0){e.preventDefault();const dx=e.touches[1].clientX-e.touches[0].clientX;const dy=e.touches[1].clientY-e.touches[0].clientY;const currentDistance=Math.sqrt(dx*dx+dy*dy);const scaleMultiplier=currentDistance/zoomState.initialPinchDistance;const newScale=Math.min(Math.max(zoomState.initialScale*scaleMultiplier,1),3.5);const scaleRatio=newScale/zoomState.initialScale;zoomState.translateX=zoomState.pinchCenterX-(zoomState.pinchCenterX-zoomState.initialTranslateX)*scaleRatio;zoomState.translateY=zoomState.pinchCenterY-(zoomState.pinchCenterY-zoomState.initialTranslateY)*scaleRatio;zoomState.scale=newScale;updateZoomTransform();}else if(e.touches.length===1&&zoomState.isDragging){e.preventDefault();const touch=e.touches[0];zoomState.translateX=touch.clientX-zoomState.startX;zoomState.translateY=touch.clientY-zoomState.startY;updateZoomTransform();}},{passive:false});body.addEventListener('touchend',e=>{if(e.touches.length<2)zoomState.initialPinchDistance=0;if(e.touches.length===0)zoomState.isDragging=false;});}
 
 function renderDetailPanel(zid){
   const sec=SD[zid];
@@ -716,20 +660,20 @@ function render3BlockPanel(zid){
   const maxB3=Math.max(...rows.map(r=>(r.b3||[]).length));
   const ghost=()=>`<span class="seat-ghost"></span>`;
   const aisle=(r)=>`<span class="sp-aisle">${r}</span>`;
-  let html=`<div class="seat-container" data-zoom="low"><div class="sp-note">Stage</div><div class="sp-grid">`;
+  let html=`<div class="sp-note">Stage</div><div class="sp-grid">`;
   for(const {row,b1=[],b2=[],b3=[]} of rows){
     html+=`<div class="sp-row-wrap"><div class="sp-row-label">${row}</div><div class="sp-seats">`;
     for(let i=0;i<maxB1-b1.length;i++) html+=ghost();
-    b1.forEach(s=>{html+=seatBtnWithLabel(zid,row,s);});
+    b1.forEach(s=>{html+=seatBtn(zid,row,s);});
     html+=aisle(row);
     for(let i=0;i<maxB2-b2.length;i++) html+=ghost();
-    b2.forEach(s=>{html+=seatBtnWithLabel(zid,row,s);});
+    b2.forEach(s=>{html+=seatBtn(zid,row,s);});
     html+=aisle(row);
-    b3.forEach(s=>{html+=seatBtnWithLabel(zid,row,s);});
+    b3.forEach(s=>{html+=seatBtn(zid,row,s);});
     for(let i=0;i<maxB3-b3.length;i++) html+=ghost();
     html+=`</div></div>`;
   }
-  html+=`</div></div>`;
+  html+=`</div>`;
   document.getElementById('sp-body').innerHTML=html;
 }
 
