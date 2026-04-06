@@ -205,3 +205,16 @@ body{background:#f0efe8;min-height:100vh;-webkit-tap-highlight-color:transparent
   .seat-ghost{min-width:28px;height:28px;margin:1px;}
   .sp-aisle{height:28px;}
 }
+/* Ring section buttons (below map) */
+#ring-buttons{display:flex;gap:10px;margin:10px 0 4px;}
+.ring-btn{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 16px;font-size:14px;font-weight:600;
+  background:rgba(24,95,165,0.06);border:2px solid rgba(24,95,165,0.4);
+  border-radius:8px;color:#185FA5;cursor:pointer;
+  transition:background .15s,border-color .15s;touch-action:manipulation;min-height:48px;
+}
+.ring-btn:hover{background:rgba(24,95,165,0.18);border-color:rgba(24,95,165,0.7);}
+.ring-btn.ring-btn-claimed{background:rgba(210,65,10,0.10);border-color:rgba(210,65,10,0.45);color:#c0390a;}
+.ring-btn.ring-btn-claimed:hover{background:rgba(210,65,10,0.22);border-color:rgba(210,65,10,0.8);}
+.ring-btn-badge{font-size:11px;font-weight:700;background:rgba(210,65,10,0.15);color:#c0390a;padding:2px 7px;border-radius:10px;}

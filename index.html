@@ -38,6 +38,16 @@
   <div class="map-outer" id="map-outer">
     <img src="venue_map.jpg" id="hall-img" alt="Boettcher Concert Hall" onload="buildZones()"/>
   </div>
+  <div id="ring-buttons">
+    <button id="ring-btn-ring_4" class="ring-btn" onclick="openPanel('ring_4','Rings 3 &amp; 4')">
+      <span class="ring-btn-label">Rings 3 &amp; 4</span>
+      <span class="ring-btn-badge" style="display:none"></span>
+    </button>
+    <button id="ring-btn-ring_2" class="ring-btn" onclick="openPanel('ring_2','Rings 1 &amp; 2')">
+      <span class="ring-btn-label">Rings 1 &amp; 2</span>
+      <span class="ring-btn-badge" style="display:none"></span>
+    </button>
+  </div>
   <div id="roster">
     <div class="rtitle">Who's coming</div>
     <div class="rgrid" id="rgrid"><span class="empty">No seats claimed yet — be first! 🎺</span></div>
